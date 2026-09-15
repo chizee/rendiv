@@ -7,8 +7,9 @@ export function generateRenderEntryCode(
   userEntryPoint: string,
   overrides?: Record<string, unknown>,
 ): string {
-  // Use the absolute path directly for Vite to resolve
-  const importPath = userEntryPoint;
+  // Vite resolves forward-slash paths on every platform. Serialize the import
+  // specifier so quotes and other special characters remain valid JavaScript.
+  const importPath = JSON.stringify(userEntryPoint.replace(/\\/g, '/'));
 
   // Serialize overrides so Sequence components can read them at runtime
   const overridesSnippet = overrides && Object.keys(overrides).length > 0
@@ -16,7 +17,7 @@ export function generateRenderEntryCode(
     : '';
 
   return `
-import '${importPath}';
+import ${importPath};
 import { getRootComponent, CompositionManagerContext, TimelineContext, CompositionContext, RendivEnvironmentContext, getPendingHoldCount } from '@rendiv/core';
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
