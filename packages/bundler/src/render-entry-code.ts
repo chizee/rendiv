@@ -1,3 +1,5 @@
+import path from 'node:path';
+
 /**
  * Generates the JavaScript code for the render entry point.
  * This code is injected into the bundle and bridges the headless browser
@@ -7,8 +9,13 @@ export function generateRenderEntryCode(
   userEntryPoint: string,
   overrides?: Record<string, unknown>,
 ): string {
-  // Use the absolute path directly for Vite to resolve
-  const importPath = userEntryPoint;
+  // Normalize Windows separators while preserving literal backslashes in POSIX
+  // filenames. Serialize the specifier to keep special characters valid in JS.
+  const isWindowsPath = path.win32.isAbsolute(userEntryPoint)
+    && (process.platform === 'win32' || !path.posix.isAbsolute(userEntryPoint));
+  const importPath = JSON.stringify(isWindowsPath
+    ? userEntryPoint.replace(/\\/g, '/')
+    : userEntryPoint);
 
   // Serialize overrides so Sequence components can read them at runtime
   const overridesSnippet = overrides && Object.keys(overrides).length > 0
@@ -16,7 +23,7 @@ export function generateRenderEntryCode(
     : '';
 
   return `
-import '${importPath}';
+import ${importPath};
 import { getRootComponent, CompositionManagerContext, TimelineContext, CompositionContext, RendivEnvironmentContext, getPendingHoldCount } from '@rendiv/core';
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
