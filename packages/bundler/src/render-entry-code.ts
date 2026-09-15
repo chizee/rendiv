@@ -1,3 +1,5 @@
+import path from 'node:path';
+
 /**
  * Generates the JavaScript code for the render entry point.
  * This code is injected into the bundle and bridges the headless browser
@@ -7,9 +9,13 @@ export function generateRenderEntryCode(
   userEntryPoint: string,
   overrides?: Record<string, unknown>,
 ): string {
-  // Vite resolves forward-slash paths on every platform. Serialize the import
-  // specifier so quotes and other special characters remain valid JavaScript.
-  const importPath = JSON.stringify(userEntryPoint.replace(/\\/g, '/'));
+  // Normalize Windows separators while preserving literal backslashes in POSIX
+  // filenames. Serialize the specifier to keep special characters valid in JS.
+  const isWindowsPath = path.win32.isAbsolute(userEntryPoint)
+    && (process.platform === 'win32' || !path.posix.isAbsolute(userEntryPoint));
+  const importPath = JSON.stringify(isWindowsPath
+    ? userEntryPoint.replace(/\\/g, '/')
+    : userEntryPoint);
 
   // Serialize overrides so Sequence components can read them at runtime
   const overridesSnippet = overrides && Object.keys(overrides).length > 0
